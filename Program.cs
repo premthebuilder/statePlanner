@@ -106,6 +106,11 @@ namespace ptest1
             return RPC;
         }
 
+        /// <summary>
+        /// Creating L Matrix
+        /// </summary>
+        /// <param name="ARPC"></param>
+        /// <returns></returns>
         static double[,] CreateLMatrix(double[,] ARPC)
         {
             Matrix<double> Imat = DenseMatrix.CreateIdentity(382);
@@ -140,6 +145,180 @@ namespace ptest1
             return ARPC;
         }
 
+        /// <summary>
+        /// Calculate the Output Disturbance(Col H Direct Effects)
+        /// </summary>
+        /// <param name="sectors"></param>
+        /// <param name="earnings"></param>
+        /// <param name="output"></param>
+        /// <param name="dist"></param>
+        /// <param name="jobsBy1000">Vectors - Col-N</param>
+        /// <param name="earningsByOutput">Vectors - Col -O</param>
+        /// <returns></returns>
+        static double[] CreateOutpuDisturbance(int sectors, double earnings, double output, double [] dist, double[] jobsBy1000, double[] earningsByOutput)
+        {
+            double[] OPDist = new double[sectors];
+
+            if (output == 0)
+            {
+                if (earnings == 0)
+                {
+                    for (int i = 0; i < sectors; i++)
+                    {
+                        OPDist[i] = dist[i] / jobsBy1000[i];
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < sectors; i++)
+                    {
+                        OPDist[i] = dist[i] / earningsByOutput[i];
+                    }
+                }
+            }
+            else
+            {
+                OPDist = dist;
+            }
+
+            return OPDist;
+        }
+
+        /// <summary>
+        /// Creating Direct Effects Columns:Col - J-M Direct Effects
+        /// </summary>
+        /// <param name="sectors"></param>
+        /// <param name="RPC"></param>
+        /// <param name="OPDist"></param>
+        /// <param name="jobsBy1000">Vectors - Col-N</param>
+        /// <param name="earningsByOutput">Vectors - Col -O</param>
+        /// <param name="valueAddedByOutput">Vectors - Col - P</param>
+        /// <param name="Output">DirectEffects-Col j</param>
+        /// <param name="EmpPerOut">DirectEffects-Col K</param>
+        /// <param name="EarPerOut">DirectEffects-Col L</param>
+        /// <param name="ValAddPerOut">DirectEffects-Col M</param>
+        /// <returns></returns>
+        static bool CreateDirectEffects(int sectors, double[] RPC, double[]OPDist, double[] jobsBy1000,double[] earningsByOutput, double[] valueAddedByOutput, out double[] Output,out double[] EmpPerOut, out double[] EarPerOut, out double[] ValAddPerOut)
+        {
+            bool result = true;
+            Output = new double[sectors];
+            EmpPerOut = new double[sectors];
+            EarPerOut = new double[sectors];
+            ValAddPerOut = new double[sectors];
+
+            //output
+            //to be clarified as it the same as not using RPC
+            Output = OPDist;
+
+            //Employement Per Output
+            for (int i = 0; i < sectors; i++)
+            {
+                EmpPerOut[i] = Output[i] * jobsBy1000[i];
+            }
+
+            //Earning PEr Output
+            for (int i = 0; i < sectors; i++)
+            {
+                EarPerOut[i] = Output[i] * earningsByOutput[i];
+            }
+
+            //Value Added Per Output
+            for (int i = 0; i < sectors; i++)
+            {
+                ValAddPerOut[i] = Output[i] * valueAddedByOutput[i];
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Creating Total Effects Columns:Col - Q-W Direct Effects
+        /// </summary>
+        /// <param name="sectors"></param>
+        /// <param name="L"></param>
+        /// <param name="OPDist"></param>
+        /// <param name="jobsBy1000">Vectors - Col-N</param>
+        /// <param name="earningsByOutput">Vectors - Col -O</param>
+        /// <param name="valueAddedByOutput">Vectors - Col - P</param>
+        /// <param name="FedTaxOp">>Vectors - Col - S</param>
+        /// <param name="StTaxOp">>Vectors - Col - T</param>
+        /// <param name="LclTaxOp">>Vectors - Col - U</param>
+        /// <param name="Output">DirectEffects-Col Q</param>
+        /// <param name="EmpPerOut">DirectEffects-Col R</param>
+        /// <param name="EarPerOut">DirectEffects-Col S</param>
+        /// <param name="ValAddPerOut">DirectEffects-Col T</param>
+        /// <param name="FedGenPerOut">DirectEffects-Col U</param>
+        /// <param name="StPerOut">DirectEffects-Col V</param>
+        /// <param name="LclPerOut">DirectEffects-Col W</param>
+        /// <returns></returns>
+        static bool CreateTotalEffects(int sectors, Matrix L, double[] OPDist, double[] jobsBy1000, double[] earningsByOutput, double[] valueAddedByOutput, double[] FedTaxOp, double[] StTaxOp, double[] LclTaxOp, out double[] Output, out double[] EmpPerOut, out double[] EarPerOut, out double[] ValAddPerOut, out double[] FedGenPerOut,out double[] StPerOut, out double[] LclPerOut)
+        {
+            bool result = true;
+            Output = new double[sectors];
+            EmpPerOut = new double[sectors];
+            EarPerOut = new double[sectors];
+            ValAddPerOut = new double[sectors];
+            FedGenPerOut = new double[sectors];
+            StPerOut = new double[sectors];
+            LclPerOut = new double[sectors];
+
+            // Creating multidimentional double array from array, to form matrix later
+            double[,] OPDistMult = new double[1, OPDist.Length];
+            for (int i = 0; i < OPDist.Length; ++i)
+                OPDistMult[0, i] = OPDist[i];
+            Matrix<double> OPDistMat = DenseMatrix.OfArray(OPDistMult);
+            var op = L.Multiply(OPDistMat);
+            //MAtrix to single Dimension Array
+            for (int i = 0; i < sectors; i++)
+            {
+                Output[i] = op[i, 0];
+            }
+
+            //Employement Per Output
+            for (int i = 0; i < sectors; i++)
+            {
+                EmpPerOut[i] = Output[i] * jobsBy1000[i];
+            }
+
+            //Earning PEr Output
+            for (int i = 0; i < sectors; i++)
+            {
+                EarPerOut[i] = Output[i] * earningsByOutput[i];
+            }
+
+            //Value Added Per Output
+            for (int i = 0; i < sectors; i++)
+            {
+                ValAddPerOut[i] = Output[i] * valueAddedByOutput[i];
+            }
+
+            //Federal General Per Output
+            for (int i = 0; i < sectors; i++)
+            {
+                FedGenPerOut[i] = Output[i] * FedTaxOp[i];
+            }
+
+            //State PEr Output
+            for (int i = 0; i < sectors; i++)
+            {
+                StPerOut[i] = Output[i] * StTaxOp[i];
+            }
+
+            //Local Per Output
+            for (int i = 0; i < sectors; i++)
+            {
+                LclPerOut[i] = Output[i] * LclTaxOp[i];
+            }
+
+            return result;
+        }
+
+
+        static bool CreateDetailedIndustryTotEff()
+        {
+
+        }
+
         static void Main(string[] args)
         {
             Program pr = new Program();
@@ -148,35 +327,12 @@ namespace ptest1
             DataTable dt = VectorReader();
             double[] RPC = VectorToRPC(dt);
             double[,] ARPC = CreateARPC(A,RPC);
+
+
             CreateLMatrix(ARPC);
-            for (int i = 0; i < 382; i++)
-            {
-                for (int j = 0; j < 382; j++)
-                {
-                    if(i==j)
-                    {
-                        pr.IMatrix[i,j] = 1.0;
-                    }
-                    else
-                    {
-                        pr.IMatrix[i, j] = 0.0;
-                    }
-                }
-            }
-            for(int i=0;i<382;i++)
-            {
-                pr.RPC[i] = 0;                
-            }
-
             
-            for(int i=0; i<pr.sect; i++)//obtaining pA Matrix , multiplying 
-            {
-                for(int j=0;j<pr.sect; j++)
-                {
-                    pr.pAMatrix[j, i] = pr.IMatrix[j, i] * pr.RPC[j];
-                }
-
-            }
+            
+            
                 
         }
     }
